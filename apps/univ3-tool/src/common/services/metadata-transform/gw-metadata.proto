@@ -1,0 +1,117 @@
+syntax = "proto3";
+
+enum OperatorType {
+    OPERATOR_TYPE_UNSPECIFIED = 0;
+    OPERATOR_TYPE_SYSTEM = 1;
+    OPERATOR_TYPE_USER = 2;
+    OPERATOR_TYPE_ADMIN = 3;
+    OPERATOR_TYPE_AFFILIATE_USER = 4;
+}
+
+message Operator {
+    OperatorType type = 1; // 类型：user/admin/system等
+    int64 id = 2; // ID
+    UserAgent user_agent = 3; // user agent
+    string md5_api_key = 4; // md5 后的 api key
+    string x_origin_from = 5; // x-origin-from 本地站路由增加的本地站标识字符串，与broker_id映射
+    string name = 6; // 操作者 name
+    map<string, bool> permission_list = 7; // 操作者 permission list
+    bool is_login = 8; // 操作者 login status
+    bool is_unified_account = 9; // 是否是统保账户
+}
+
+
+enum Platform {
+    PLATFORM_UNSPECIFIED = 0;
+    PLATFORM_APP = 1; // iOS、安卓公用
+    PLATFORM_H5 = 2; // 手机网页
+    PLATFORM_PCWEB = 3; // PC网页
+    PLATFORM_INTERNAL = 4; // 内部管理系统共用
+    PLATFORM_CRM_APP = 5; // CRM-APP
+    PLATFORM_OPENAPI = 6; // Open API
+    PLATFORM_FIX = 7; // Open API
+}
+
+
+
+message HTTPRequestMeta {
+    string method = 1;
+    string uri = 2;
+    string host = 3;
+    string user_agent = 4;
+    string referer = 5;
+    string platform = 6;
+}
+
+
+message UserAgent {
+    string source_ip = 1; // source IP address
+    HTTPRequestMeta http_meta = 2; // for http protocol
+    Platform platform = 3; // (用于后台服务识别来源的)平台：app,web,h5
+    string op_from = 4; // 请求来源:api,web
+    string language = 5; // 客户端语言; en-us
+    string versioncode = 6; // 客户端版本; yyyymmddxx
+    string fingerprint = 7; // 设备识别号 / web guid等
+    string x_client_tag = 8; // 前端打点
+    OpPlatform op_platform = 9; // (用于传给交易服务的)平台：android，ios
+}
+
+enum OpPlatform {
+    option allow_alias = true;
+    unknown = 0;
+    UNKNOWN = 0;
+
+    pc = 1; // 用户从PC站发起请求
+    FromPC = 1;
+
+    h5 = 2; // 用户从M站发起请求
+    FromH5 = 2;
+
+    api = 3; // 用户使用机构api发起请求
+    // todo 如果要细分 api的各种来源的话, 考虑用 `api_xxx_yyy` 格式
+    FromApi = 3;
+
+    ios = 4; // 用户从苹果app发起请求
+    FromIos = 4;
+
+    android = 5; // 用户从安卓app发起请求
+    FromAndroid = 5;
+
+    fix = 6; // 通过fix协议发起请求
+    FromFix = 6;
+
+    sys = 7;
+    FromSys = 7;
+
+    // NEXT: 8
+}
+
+
+
+
+message GWRequestMetadata {
+    Operator operator = 1; // 操作者信息
+    int64 request_time_e6 = 2; // 请求时间
+    int64 request_expired_e6 = 3; // 请求过期时间
+    string grayscale_release = 4; // 灰度发布
+    repeated Operator target_members = 5; // 被操作者信息
+    string app_name = 6; // 请求方appname
+}
+
+
+
+message GWResponseMetadata {
+    int64 request_recv_time_e6 = 1; // 服务端接收请求时间
+    int64 response_time_e6 = 2; // 服务端发送响应时间
+    // // Deprecated: use GWAPIResponseExtra
+    string ext_code = 3;
+    // // Deprecated: use GWAPIResponseExtra
+    bytes ext_info_json = 4; // 必须为符合json格式的报文
+    // // Deprecated: use GWAPIResponseExtra
+    bool override_token = 5; // 是否覆盖token
+    // Deprecated: use GWAPIResponseExtra
+    // google.protobuf.StringValue token = 6; // null:不变化, "":踢下线, "abc":将token更新为abc
+}
+
+
+
