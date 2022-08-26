@@ -13,7 +13,7 @@ export class AcrossDomainInterceptor implements NestInterceptor {
     return next.handle().pipe(
       map((data) => {
         const req = context.switchToHttp().getRequest();
-        req.res.header('Access-Control-Allow-Origin', 'www.bybit.com');
+        req.res.header('Access-Control-Allow-Origin', '*');
         req.res.header('Access-Control-Allow-Credentials', true);
         return data;
       }),

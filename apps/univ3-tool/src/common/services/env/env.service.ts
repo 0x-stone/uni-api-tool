@@ -22,7 +22,8 @@ export class EnvService {
   }
   get endPoint() {
     const envs = {
-      
+      NODE_LINK: process.env.NODE_LINK,
+      UNI_V3_POOL_MANAGE: process.env.UNI_V3_POOL_MANAGE,
     };
     return envs;
   }
