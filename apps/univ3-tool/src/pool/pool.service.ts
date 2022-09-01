@@ -17,7 +17,7 @@ import {
 } from 'rxjs';
 import { LoggerService } from '../common/services/logger/logger.service';
 
-interface ImintParams {
+interface IMintParams {
   token0: string;
   token1: string;
   fee: number;
@@ -28,6 +28,14 @@ interface ImintParams {
   amount0Min: string;
   amount1Min: string;
   recipient: string;
+  deadline: string;
+}
+
+interface IDecreaseParams {
+  tokenId: string;
+  liquidity: string;
+  amount0Min: string;
+  amount1Min: string;
   deadline: string;
 }
 
@@ -43,25 +51,7 @@ export class PoolService {
   constructor(
     private envService: EnvService,
     private loggerService: LoggerService,
-  ) {
-    // const code = this.encodeMulticall([
-    //   this.encodeMint({
-    //     token0: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
-    //     token1: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
-    //     fee: 3000,
-    //     tickLower: '195960',
-    //     tickUpper: '209820',
-    //     amount0Desired: '42070433',
-    //     amount1Desired: '27118099468711714',
-    //     amount0Min: '41713090',
-    //     amount1Min: '26885973871923966',
-    //     recipient: '0x6965e00F28950FFB726C12682e1F3F9d08D13043',
-    //     deadline: '1662045003',
-    //   }),
-    //   this.encodeRefund(),
-    // ]);
-    // console.log(code);
-  }
+  ) {}
 
   private MIN_TICK = -887272;
 
@@ -83,7 +73,7 @@ export class PoolService {
     );
   }
 
-  private encodeMint(params: ImintParams) {
+  private encodeMint(params: IMintParams) {
     return this.poolManage.interface.encodeFunctionData('mint', [params]);
   }
 
@@ -145,8 +135,14 @@ export class PoolService {
     }
   }
 
+  private encodeDecreaseLiquidity(params: IDecreaseParams) {
+    return this.poolManage.interface.encodeFunctionData('decreaseLiquidity', [
+      params,
+    ]);
+  }
+
   public sendMintTransaction(
-    params: ImintParams,
+    params: IMintParams,
     privateKey: string,
     gasLimit = 600000,
   ) {
@@ -186,7 +182,7 @@ export class PoolService {
       }),
 
       mergeMap((signedTx) => {
-        return from(this.provider.sendTransaction(signedTx)).pipe();
+        return from(this.provider.sendTransaction(signedTx));
       }),
 
       catchError((e) => {
@@ -197,13 +193,47 @@ export class PoolService {
       }),
 
       tap((transaction) => {
-        transaction.wait().then((data) => {
-          // do something
-        });
+        transaction
+          .wait()
+          .then((data) => {
+            // do something
+          })
+          .catch();
       }),
 
       catchError(() => {
         throw new HttpException(message, httpStatus);
+      }),
+    );
+  }
+
+  public decreaseLiquidity(
+    IDecreaseParams: IDecreaseParams,
+    privateKey: string,
+    gasLimit: number,
+  ) {
+    return of(this.encodeDecreaseLiquidity(IDecreaseParams)).pipe(
+      map((code) => {
+        return this.encodeMulticall([code]);
+        // collect, sweeptoken
+      }),
+      mergeMap((transactionData) => {
+        const wallet = new ethers.Wallet(privateKey, this.provider);
+        const txConfig = {
+          to: this.envService.endPoint.UNI_V3_POOL_MANAGE,
+          data: transactionData,
+          gas: gasLimit,
+        };
+        return from(wallet.signTransaction(txConfig));
+      }),
+      mergeMap((signedTx) => {
+        return from(this.provider.sendTransaction(signedTx));
+      }),
+      catchError((e) => {
+        throw new HttpException(
+          'fail to decrese liquidity',
+          HttpStatus.BAD_REQUEST,
+        );
       }),
     );
   }
