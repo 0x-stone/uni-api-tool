@@ -32,7 +32,7 @@ describe('PoolService', () => {
       service.encodeMint({
         token0: '0x6070733C068a5a30054A751605eFdC3a22e02d64',
         token1: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
-        fee: '100',
+        fee: 1000,
         tickLower: '-115136',
         tickUpper: '-92109',
         amount0Desired: '49882979211620961850079940376',

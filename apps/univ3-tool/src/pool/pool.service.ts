@@ -1,6 +1,6 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { BigNumber, Contract, ethers } from 'ethers';
-import { abi as INonfungiblePositionManager } from '@uniswap/v3-periphery/artifacts/contracts/interfaces/INonfungiblePositionManager.sol/INonfungiblePositionManager.json';
+import { abi as INonfungiblePositionManager } from '@uniswap/v3-periphery/artifacts/contracts/NonfungiblePositionManager.sol/NonfungiblePositionManager.json';
 import { abi as IPoolFactory } from '@uniswap/v3-core/artifacts/contracts/interfaces/IUniswapV3Factory.sol/IUniswapV3Factory.json';
 import { abi as IPool } from '@uniswap/v3-core/artifacts/contracts/interfaces/IUniswapV3Pool.sol/IUniswapV3Pool.json';
 import { EnvService } from '../common/services/env/env.service';
@@ -18,7 +18,6 @@ interface ImintParams {
   recipient: string;
   deadline: string;
 }
-
 
 @Injectable()
 export class PoolService {
@@ -53,6 +52,10 @@ export class PoolService {
 
   encodeMint(params: ImintParams) {
     return this._poolManage.interface.encodeFunctionData('mint', [params]);
+  }
+
+  encodeMulticall(bytes: string[]) {
+    return this._poolManage.interface.encodeFunctionData('multicall', [bytes]);
   }
 
   async getPoolContract(

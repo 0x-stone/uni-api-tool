@@ -25,6 +25,7 @@ export class EnvService {
       NODE_LINK: process.env.NODE_LINK,
       UNI_V3_POOL_MANAGE: process.env.UNI_V3_POOL_MANAGE,
       UNI_V3_FACTORY: process.env.UNI_V3_FACTORY,
+      UNI_V3_PERIPHERY: process.env.UNI_V3_PERIPHERY,
     };
     return envs;
   }
