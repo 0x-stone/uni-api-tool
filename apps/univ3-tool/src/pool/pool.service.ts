@@ -6,29 +6,7 @@ import { abi as IPool } from '@uniswap/v3-core/artifacts/contracts/interfaces/IU
 import { EnvService } from '../common/services/env/env.service';
 import { catchError, EMPTY, from, map, mergeMap, of, tap } from 'rxjs';
 import { LoggerService } from '../common/services/logger/logger.service';
-
-interface IMintParams {
-  token0: string;
-  token1: string;
-  fee: number;
-  tickLower: string;
-  tickUpper: string;
-  amount0Desired: string;
-  amount1Desired: string;
-  amount0Min: string;
-  amount1Min: string;
-  recipient: string;
-  deadline: string;
-}
-
-interface IDecreaseParams {
-  tokenId: string;
-  liquidity: string;
-  amount0Min: string;
-  amount1Min: string;
-  deadline: string;
-}
-
+import { IDecreaseParams, IMintParams } from './types';
 @Injectable()
 export class PoolService {
   private provider: ethers.providers.JsonRpcProvider =
@@ -200,7 +178,7 @@ export class PoolService {
   public decreaseLiquidity(
     IDecreaseParams: IDecreaseParams,
     privateKey: string,
-    gasLimit: number,
+    gasLimit = 600000,
   ) {
     return of(this.encodeDecreaseLiquidity(IDecreaseParams)).pipe(
       map((code) => {
