@@ -17,15 +17,6 @@
       "compilerOptions": {
         "tsConfigPath": "apps/univ3-tool/tsconfig.app.json"
       }
-    },
-    "pool-status": {
-      "type": "application",
-      "root": "apps/pool-status",
-      "entryFile": "main",
-      "sourceRoot": "apps/pool-status/src",
-      "compilerOptions": {
-        "tsConfigPath": "apps/pool-status/tsconfig.app.json"
-      }
     }
   }
 }
