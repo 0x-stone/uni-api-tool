@@ -1,20 +1,10 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
-import { BigNumber, Contract, ethers, logger } from 'ethers';
+import { BigNumber, Contract, ethers } from 'ethers';
 import { abi as INonfungiblePositionManager } from '@uniswap/v3-periphery/artifacts/contracts/NonfungiblePositionManager.sol/NonfungiblePositionManager.json';
 import { abi as IPoolFactory } from '@uniswap/v3-core/artifacts/contracts/interfaces/IUniswapV3Factory.sol/IUniswapV3Factory.json';
 import { abi as IPool } from '@uniswap/v3-core/artifacts/contracts/interfaces/IUniswapV3Pool.sol/IUniswapV3Pool.json';
 import { EnvService } from '../common/services/env/env.service';
-import {
-  async,
-  catchError,
-  empty,
-  EMPTY,
-  from,
-  map,
-  mergeMap,
-  of,
-  tap,
-} from 'rxjs';
+import { catchError, EMPTY, from, map, mergeMap, of, tap } from 'rxjs';
 import { LoggerService } from '../common/services/logger/logger.service';
 
 interface IMintParams {
