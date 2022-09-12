@@ -73,7 +73,7 @@ export class PoolService {
     token1: string,
     fee: number,
   ) {
-    if (tickLower < tickUpper) {
+    if (tickLower > tickUpper) {
       throw new HttpException(
         'tickLower should < tickUpper',
         HttpStatus.BAD_REQUEST,
