@@ -5,7 +5,7 @@ import * as dotenv from 'dotenv';
 import * as path from 'path';
 import { LoggerService } from '../common/services/logger/logger.service';
 import { firstValueFrom } from 'rxjs';
-import hre from 'hardhat';
+import { ethers } from 'hardhat';
 
 describe('PoolService', () => {
   let service: PoolService;
