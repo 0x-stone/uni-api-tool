@@ -130,7 +130,7 @@ export class PoolService {
         return this.encodeMint(params);
       }),
       map((mintCode) => {
-        return this.encodeMulticall([mintCode, this.encodeRefund()]);
+        return this.encodeMulticall([mintCode]);
       }),
       catchError((e) => {
         this.loggerService.error(e);
@@ -142,11 +142,25 @@ export class PoolService {
       mergeMap((transactionData) => {
         const wallet = new ethers.Wallet(privateKey, this.provider);
         const txConfig = {
+          type: 2,
           to: this.envService.endPoint.UNI_V3_POOL_MANAGE,
           data: transactionData,
-          gas: gasLimit,
+          gasLimit,
+          nonce: null,
+          chainId: 31337,
+          maxFeePerGas: 20569250185,
+          maxPriorityFeePerGas: 1000000,
         };
-        return from(wallet.signTransaction(txConfig));
+       
+        return of(txConfig).pipe(
+          mergeMap(() => {
+            return from(wallet.getTransactionCount());
+          }),
+          tap((count) => {
+            txConfig.nonce = count;
+          }),
+          mergeMap(() => from(wallet.signTransaction(txConfig))),
+        );
       }),
 
       mergeMap((signedTx) => {

@@ -4,8 +4,10 @@ import { PoolService } from './pool.service';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 import { LoggerService } from '../common/services/logger/logger.service';
-import { ethers, network } from 'hardhat';
-import { BigNumber, Contract, Signer } from 'ethers';
+// import { ethers, network } from 'hardhat';
+// import ethers from 'ethers'
+import { BigNumber, Contract, Signer, ethers } from 'ethers';
+import { firstValueFrom } from 'rxjs';
 
 describe('PoolService', () => {
   let service: PoolService;
@@ -17,10 +19,12 @@ describe('PoolService', () => {
       path: path.resolve(process.cwd(), envPath),
     });
   }
+  const { NODE_LINK, UNI_V3_POOL_MANAGE } = process.env;
+  const provider = new ethers.providers.JsonRpcProvider(NODE_LINK);
 
-  const USDC_BALANCE = 10000000000;
-  const WETH_BALANCE = ethers.utils.parseEther('1');
-  const USDC_ADDRESS = '0xdac17f958d2ee523a2206206994597c13d831ec7';
+  const USDC_BALANCE = 100000000000;
+  const WETH_BALANCE = ethers.utils.parseEther('2');
+  const USDC_ADDRESS = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48';
   const USDC_HOLDER = '0x55FE002aefF02F77364de339a1292923A15844B8';
   const WETH_ADDRESS = '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2';
   const WETH_HOLDER = '0xcb74075f036301b82c13df959ca9479b1ba0e660';
@@ -723,36 +727,27 @@ describe('PoolService', () => {
     },
   ];
 
+  const OWNER_PRIVATE_KEY =
+    '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80';
+
   let ownerSigner: Signer;
   let usdcSigner: Signer;
   let usdcContract: Contract;
   let wethContract: Contract;
   let wethSigner: Signer;
   beforeEach(async () => {
-    [ownerSigner] = await ethers.getSigners();
-    await network.provider.request({
-      method: 'hardhat_impersonateAccount',
-      params: [USDC_HOLDER],
-    });
-    usdcSigner = await ethers.getSigner(USDC_HOLDER);
+    ownerSigner = provider.getSigner();
 
-    await network.provider.request({
-      method: 'hardhat_impersonateAccount',
-      params: [WETH_HOLDER],
-    });
-    wethSigner = await ethers.getSigner(WETH_HOLDER);
+    await provider.send('hardhat_impersonateAccount', [USDC_HOLDER]);
+    usdcSigner = provider.getSigner(USDC_HOLDER);
+
+    await provider.send('hardhat_impersonateAccount', [WETH_HOLDER]);
+    wethSigner = provider.getSigner(WETH_HOLDER);
 
     usdcContract = new ethers.Contract(USDC_ADDRESS, ERC20_ABI, usdcSigner);
-
     wethContract = new ethers.Contract(WETH_ADDRESS, ERC20_ABI, wethSigner);
 
-    await ownerSigner.sendTransaction({
-      to: WETH_HOLDER,
-      value: WETH_BALANCE,
-    });
-
     await wethContract.transfer(ownerSigner.getAddress(), WETH_BALANCE);
-
     await usdcContract.transfer(ownerSigner.getAddress(), USDC_BALANCE);
 
     const module: TestingModule = await Test.createTestingModule({
@@ -770,27 +765,50 @@ describe('PoolService', () => {
     const balanceOfToken1: BigNumber = await wethContract.balanceOf(
       ownerSigner.getAddress(),
     );
+
     expect(balanceOfToken0.toString()).not.toBeNull();
     expect(balanceOfToken1.toString()).not.toBeNull();
   });
 
   it('mint encode should be correct', async () => {
+    const balanceOfToken0: BigNumber = await usdcContract.balanceOf(
+      ownerSigner.getAddress(),
+    );
+    const balanceOfToken1: BigNumber = await wethContract.balanceOf(
+      ownerSigner.getAddress(),
+    );
+    console.log(balanceOfToken0, balanceOfToken1, 555);
+    await usdcContract
+      .connect(ownerSigner)
+      .approve(UNI_V3_POOL_MANAGE, balanceOfToken0);
+    await wethContract
+      .connect(ownerSigner)
+      .approve(UNI_V3_POOL_MANAGE, balanceOfToken1);
+
+    const block = await provider.getBlockNumber();
+    const timestamp = (await provider.getBlock(block)).timestamp + 2000;
+
     const params = {
-      token0: '0x6070733C068a5a30054A751605eFdC3a22e02d64',
-      token1: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
-      fee: 1000,
-      tickLower: '-115136',
-      tickUpper: '-92109',
-      amount0Desired: '49882979211620961850079940376',
-      amount1Desired: '0',
-      amount0Min: '49701278734004365626583707103',
-      amount1Min: '0',
-      recipient: '0xCB4B715c154b47CA51be4864f979e217912a4FF7',
-      deadline: '1653541190',
+      token0: USDC_ADDRESS,
+      token1: WETH_ADDRESS,
+      fee: 10000,
+      tickLower: '201400',
+      tickUpper: '203400',
+      amount0Desired: '990309915',
+      amount1Desired: '805808568765138063',
+      amount0Min: '932046647',
+      amount1Min: '769240697453019860',
+      recipient: await ownerSigner.getAddress(),
+      deadline: timestamp + '',
     };
+    try {
+      const result = await firstValueFrom(
+        service.sendMintTransaction(params, OWNER_PRIVATE_KEY),
+      );
+    } catch (error) {
+      console.log(error);
+    }
+
     expect(service).toBeDefined();
-    // const result = await firstValueFrom(
-    //   service.sendMintTransaction(params, OWNER_KEY),
-    // );
   });
 });
