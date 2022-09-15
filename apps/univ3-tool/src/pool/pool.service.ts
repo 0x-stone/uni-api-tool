@@ -1,10 +1,10 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
-import { BigNumber, Contract, ethers } from 'ethers';
+import { BigNumber, BigNumberish, Contract, ethers } from 'ethers';
 import { abi as INonfungiblePositionManager } from '@uniswap/v3-periphery/artifacts/contracts/NonfungiblePositionManager.sol/NonfungiblePositionManager.json';
 import { abi as IPoolFactory } from '@uniswap/v3-core/artifacts/contracts/interfaces/IUniswapV3Factory.sol/IUniswapV3Factory.json';
 import { abi as IPool } from '@uniswap/v3-core/artifacts/contracts/interfaces/IUniswapV3Pool.sol/IUniswapV3Pool.json';
 import { EnvService } from '../common/services/env/env.service';
-import { catchError, EMPTY, from, map, mergeMap, of, tap } from 'rxjs';
+import { catchError, EMPTY, from, map, mergeMap, of, tap, zip } from 'rxjs';
 import { LoggerService } from '../common/services/logger/logger.service';
 import { IDecreaseParams, IMintParams } from './types';
 @Injectable()
@@ -109,6 +109,31 @@ export class PoolService {
     ]);
   }
 
+  private genTxConfig({
+    nonce,
+    transactionData,
+    gasLimit,
+    maxFeePerGas,
+    maxPriorityFeePerGas,
+  }: {
+    nonce: BigNumberish;
+    transactionData: string;
+    gasLimit?: BigNumberish;
+    maxFeePerGas: BigNumberish;
+    maxPriorityFeePerGas: BigNumberish;
+  }) {
+    return {
+      type: 2,
+      to: this.envService.endPoint.UNI_V3_POOL_MANAGE,
+      data: transactionData,
+      gasLimit,
+      nonce,
+      chainId: this.envService.endPoint.CHAIN_ID,
+      maxFeePerGas,
+      maxPriorityFeePerGas,
+    };
+  }
+
   public sendMintTransaction(
     params: IMintParams,
     privateKey: string,
@@ -141,25 +166,21 @@ export class PoolService {
 
       mergeMap((transactionData) => {
         const wallet = new ethers.Wallet(privateKey, this.provider);
-        const txConfig = {
-          type: 2,
-          to: this.envService.endPoint.UNI_V3_POOL_MANAGE,
-          data: transactionData,
-          gasLimit,
-          nonce: null,
-          chainId: 31337,
-          maxFeePerGas: 20569250185,
-          maxPriorityFeePerGas: 1000000,
-        };
-       
-        return of(txConfig).pipe(
-          mergeMap(() => {
-            return from(wallet.getTransactionCount());
+
+        return zip(
+          from(wallet.getTransactionCount()),
+          from(this.provider.getFeeData()),
+        ).pipe(
+          map(([count, feeData]) => {
+            return this.genTxConfig({
+              nonce: count,
+              transactionData,
+              gasLimit,
+              maxFeePerGas: feeData.maxFeePerGas,
+              maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
+            });
           }),
-          tap((count) => {
-            txConfig.nonce = count;
-          }),
-          mergeMap(() => from(wallet.signTransaction(txConfig))),
+          mergeMap((txConfig) => from(wallet.signTransaction(txConfig as any))),
         );
       }),
 

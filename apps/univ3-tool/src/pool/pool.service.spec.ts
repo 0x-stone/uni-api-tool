@@ -4,8 +4,6 @@ import { PoolService } from './pool.service';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 import { LoggerService } from '../common/services/logger/logger.service';
-// import { ethers, network } from 'hardhat';
-// import ethers from 'ethers'
 import { BigNumber, Contract, Signer, ethers } from 'ethers';
 import { firstValueFrom } from 'rxjs';
 
@@ -777,7 +775,6 @@ describe('PoolService', () => {
     const balanceOfToken1: BigNumber = await wethContract.balanceOf(
       ownerSigner.getAddress(),
     );
-    console.log(balanceOfToken0, balanceOfToken1, 555);
     await usdcContract
       .connect(ownerSigner)
       .approve(UNI_V3_POOL_MANAGE, balanceOfToken0);
@@ -794,14 +791,15 @@ describe('PoolService', () => {
       fee: 10000,
       tickLower: '201400',
       tickUpper: '203400',
-      amount0Desired: '990309915',
-      amount1Desired: '805808568765138063',
-      amount0Min: '932046647',
-      amount1Min: '769240697453019860',
+      amount0Desired: '990309',
+      amount1Desired: '805808568765138',
+      amount0Min: '93204',
+      amount1Min: '769240',
       recipient: await ownerSigner.getAddress(),
       deadline: timestamp + '',
     };
     try {
+      
       const result = await firstValueFrom(
         service.sendMintTransaction(params, OWNER_PRIVATE_KEY),
       );

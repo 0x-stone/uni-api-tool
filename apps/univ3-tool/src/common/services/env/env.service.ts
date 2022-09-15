@@ -24,7 +24,8 @@ export class EnvService {
     const envs = {
       NODE_LINK: process.env.NODE_LINK,
       UNI_V3_POOL_MANAGE: process.env.UNI_V3_POOL_MANAGE,
-      UNI_V3_FACTORY: process.env.UNI_V3_FACTORY
+      UNI_V3_FACTORY: process.env.UNI_V3_FACTORY,
+      CHAIN_ID: process.env.CHAIN_ID,
     };
     return envs;
   }
