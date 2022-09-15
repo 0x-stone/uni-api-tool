@@ -215,20 +215,28 @@ export class PoolService {
     privateKey: string,
     gasLimit = 600000,
   ) {
+    const wallet = new ethers.Wallet(privateKey, this.provider);
     return of(this.encodeDecreaseLiquidity(IDecreaseParams)).pipe(
       map((code) => {
         return this.encodeMulticall([code]);
-        // collect, sweeptoken
       }),
       mergeMap((transactionData) => {
-        const wallet = new ethers.Wallet(privateKey, this.provider);
-        const txConfig = {
-          to: this.envService.endPoint.UNI_V3_POOL_MANAGE,
-          data: transactionData,
-          gas: gasLimit,
-        };
-        return from(wallet.signTransaction(txConfig));
+        return zip(
+          from(wallet.getTransactionCount()),
+          from(this.provider.getFeeData()),
+        ).pipe(
+          map(([count, feeData]) => {
+            return this.genTxConfig({
+              nonce: count,
+              transactionData,
+              gasLimit,
+              maxFeePerGas: feeData.maxFeePerGas,
+              maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
+            });
+          }),
+        );
       }),
+      mergeMap((txConfig) => from(wallet.signTransaction(txConfig as any))),
       mergeMap((signedTx) => {
         return from(this.provider.sendTransaction(signedTx));
       }),

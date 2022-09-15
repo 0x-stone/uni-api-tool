@@ -6,6 +6,7 @@ import * as path from 'path';
 import { LoggerService } from '../common/services/logger/logger.service';
 import { BigNumber, Contract, Signer, ethers } from 'ethers';
 import { firstValueFrom } from 'rxjs';
+import { HttpException } from '@nestjs/common';
 
 describe('PoolService', () => {
   let service: PoolService;
@@ -733,6 +734,9 @@ describe('PoolService', () => {
   let usdcContract: Contract;
   let wethContract: Contract;
   let wethSigner: Signer;
+  let mintTokenID: number;
+  let mintLiquidity: BigNumber;
+  let params;
   beforeEach(async () => {
     ownerSigner = provider.getSigner();
 
@@ -768,7 +772,7 @@ describe('PoolService', () => {
     expect(balanceOfToken1.toString()).not.toBeNull();
   });
 
-  it('mint encode should be correct', async () => {
+  it('mint transaction can mint token ID', async () => {
     const balanceOfToken0: BigNumber = await usdcContract.balanceOf(
       ownerSigner.getAddress(),
     );
@@ -785,7 +789,7 @@ describe('PoolService', () => {
     const block = await provider.getBlockNumber();
     const timestamp = (await provider.getBlock(block)).timestamp + 2000;
 
-    const params = {
+    params = {
       token0: USDC_ADDRESS,
       token1: WETH_ADDRESS,
       fee: 10000,
@@ -798,15 +802,66 @@ describe('PoolService', () => {
       recipient: await ownerSigner.getAddress(),
       deadline: timestamp + '',
     };
+
+    const receip = await firstValueFrom(
+      service.sendMintTransaction(params, OWNER_PRIVATE_KEY),
+    );
+    const result = await receip.wait();
+    const abi = [
+      'event IncreaseLiquidity(uint256 indexed tokenId, uint128 liquidity, uint256 amount0, uint256 amount1)',
+    ];
+    const iface = new ethers.utils.Interface(abi);
+    const tokenInfo = iface.parseLog(result.logs[4]);
+    mintTokenID = (tokenInfo.args['tokenId'] as BigNumber).toNumber();
+    mintLiquidity = tokenInfo.args['liquidity'];
+    expect(mintTokenID).toBeGreaterThan(-1);
+  });
+
+  it('emit erro when tickLower greater than tickUpper', async () => {
+    const block = await provider.getBlockNumber();
+    const timestamp = (await provider.getBlock(block)).timestamp + 2000;
+
+    params = {
+      token0: USDC_ADDRESS,
+      token1: WETH_ADDRESS,
+      fee: 10000,
+      tickLower: '205400',
+      tickUpper: '203400',
+      amount0Desired: '990309',
+      amount1Desired: '805808568765138',
+      amount0Min: '93204',
+      amount1Min: '769240',
+      recipient: await ownerSigner.getAddress(),
+      deadline: timestamp + '',
+    };
+    let error;
     try {
-      
-      const result = await firstValueFrom(
+      await firstValueFrom(
         service.sendMintTransaction(params, OWNER_PRIVATE_KEY),
       );
     } catch (error) {
-      console.log(error);
+      error = error;
     }
+    expect(error).not.toBeNull;
+  });
 
-    expect(service).toBeDefined();
+  it('decrease liquidity should work', async () => {
+    const block = await provider.getBlockNumber();
+    const timestamp = (await provider.getBlock(block)).timestamp + 2000;
+
+    params = {
+      tokenId: mintTokenID,
+      liquidity: mintLiquidity,
+      amount0Min: '0',
+      amount1Min: '0',
+      recipient: await ownerSigner.getAddress(),
+      deadline: timestamp + '',
+    };
+
+    const receip = await firstValueFrom(
+      service.decreaseLiquidity(params, OWNER_PRIVATE_KEY),
+    );
+    const result = await receip.wait();
+    expect(result).not.toBeNull
   });
 });
